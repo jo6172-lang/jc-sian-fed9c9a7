@@ -16,22 +16,26 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden;background:var(--sky2);font-family:'Gowun Dodum','Malgun Gothic','Apple SD Gothic Neo',sans-serif;color:var(--ink);-webkit-tap-highlight-color:transparent}
 #c{position:fixed;inset:0;display:block;touch-action:none}
-.top{position:fixed;z-index:5;top:0;left:0;right:0;display:flex;align-items:center;gap:8px;padding:10px 12px;pointer-events:none}
+/* 휴대폰 세로 화면 재제작(10/27): 위아래 띠를 최대한 얇게 눌러 그 사이를 집이 꽉 채웁니다.
+   제목과 안내를 한 줄에 나란히 두어 위 띠를 한 줄 높이로 유지합니다(안내가 사라져도 집이 흔들리지 않음). */
+.top{position:fixed;z-index:5;top:0;left:0;right:0;display:flex;align-items:center;gap:6px;padding:5px 8px 2px;pointer-events:none}
 .top>*{pointer-events:auto}
-.title{font-weight:700;font-size:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px 12px}
+.title{flex:none;font-weight:700;font-size:16px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:5px 10px}
 .sp{flex:1}
-button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:12px;padding:8px 12px;font-size:14px;cursor:pointer}
+button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:11px;padding:6px 10px;font-size:15px;cursor:pointer}
 button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 .seg{display:flex;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
 .seg button{border:0;border-radius:0}
-.rooms{position:fixed;z-index:5;left:0;right:0;bottom:0;display:flex;gap:6px;overflow-x:auto;padding:10px 12px calc(10px + env(safe-area-inset-bottom));scrollbar-width:none}
-.rooms::-webkit-scrollbar{display:none}
-.rooms button{flex:none;font-size:14px}
+/* 방 버튼 8개는 가로로 쓸지 않고 두 줄로 접어 전부 한눈에 보이게 합니다(가로 스크롤 없음) */
+.rooms{position:fixed;z-index:5;left:0;right:0;bottom:0;display:flex;flex-wrap:wrap;justify-content:center;gap:4px;padding:4px 6px calc(4px + env(safe-area-inset-bottom));overflow:visible}
+.rooms button{flex:none;font-size:15px;padding:5px 9px;border-radius:10px}
 #all{font-weight:700}
-.lbl{position:fixed;z-index:1;left:0;top:0;transform:translate(-50%,-50%);background:rgba(255,255,255,.88);border:1px solid var(--line);border-radius:10px;padding:2px 8px;font-size:12.5px;white-space:nowrap;pointer-events:auto;cursor:pointer;transition:opacity .2s}
+.lbl{position:fixed;z-index:1;left:0;top:0;transform:translate(-50%,-50%);background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:10px;padding:3px 9px;font-size:15px;font-weight:600;white-space:nowrap;pointer-events:auto;cursor:pointer;transition:opacity .2s}
 .lbl.hide{opacity:0;pointer-events:none}
-#msg{position:fixed;inset:0;display:grid;place-items:center;font-size:15px;background:var(--sky2)}
-.hint{position:fixed;left:50%;top:56px;transform:translateX(-50%);font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 10px;transition:opacity .6s}
+#msg{position:fixed;inset:0;display:grid;place-items:center;font-size:16px;background:var(--sky2)}
+/* 안내 문구: 제목 오른쪽 한 줄. 자리가 좁으면 말줄임으로 줄어들 뿐 줄이 늘지 않아 집을 가리지 않습니다 */
+.hint{flex:1;min-width:0;font-size:14px;line-height:1.2;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .6s}
+@media (max-width:400px){.hint{font-size:13px;padding:4px 7px}.title{font-size:15px;padding:4px 9px}}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <!-- A안 전용 3D 묶음(house-assets.js, 1MB)은 B안 확정으로 불러오지 않습니다. 파일 자체는 보존합니다. -->
@@ -39,9 +43,9 @@ button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 <body>
 <canvas id="c"></canvas>
 <div class="top">
-  <span class="title">우리 공방 집</span><span class="sp"></span>
+  <span class="title">우리 공방 집</span>
+  <div class="hint" id="hint">돌리기·확대·이름표 터치</div>
 </div>
-<div class="hint" id="hint">한 손가락: 돌리기 · 두 손가락: 확대·이동 · 이름표를 누르면 그 방으로</div>
 <div class="rooms" id="rooms"><button id="all" class="on">전체보기</button></div>
 <div id="msg">집을 짓는 중입니다…</div>
 <script type="module">
@@ -56,7 +60,7 @@ const R=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:
 R.setPixelRatio(Math.min(devicePixelRatio,2));R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;
 R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;
 const scene=new THREE.Scene();
-const cam=new THREE.PerspectiveCamera(38,1,0.1,200);
+const cam=new THREE.PerspectiveCamera(38,1,0.1,900);
 const ctl=new OrbitControls(cam,cv);
 ctl.enableDamping=true;ctl.dampingFactor=.09;ctl.minDistance=4;ctl.maxDistance=66;ctl.minPolarAngle=.25;ctl.maxPolarAngle=1.2;ctl.screenSpacePanning=false;
 
@@ -65,8 +69,10 @@ const sun=new THREE.DirectionalLight(0xfff1dc,2.1);sun.position.set(-8,18,14);su
 sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-12,right:12,top:12,bottom:-12,near:1,far:60});
 sun.shadow.bias=-.0004;sun.shadow.normalBias=.02;sun.target.position.set(6,0,7.5);scene.add(sun,sun.target);
 
-/* 하늘: 위아래 두 색 */
-{const g=new THREE.SphereGeometry(90,24,12);const m=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,
+/* 하늘: 위아래 두 색.
+   망원으로 멀리서 볼 때(카메라 거리가 100m를 넘김) 카메라가 하늘 밖으로 나가 배경이 검게
+   비던 문제가 있어, 하늘 구체를 넉넉히 키웠습니다(2026-10-27). */
+{const g=new THREE.SphereGeometry(400,24,12);const m=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,
   uniforms:{a:{value:new THREE.Color(0xcfe6f1)},b:{value:new THREE.Color(0xf7efe1)}},
   vertexShader:'varying float h;void main(){h=normalize(position).y;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
   fragmentShader:'uniform vec3 a,b;varying float h;void main(){gl_FragColor=vec4(mix(b,a,smoothstep(-.05,.5,h)),1.);}'});
@@ -112,8 +118,8 @@ function buildShell(){
   FLOORS.wood2=M(0xffffff,{map:woodTex(A?'#d6b48c':'#f0dcc0',A?'#b8956c':'#dcc39f')});FLOORS.wood2.map.repeat.set(3,3);
   FLOORS.tile1=M(0xffffff,{map:tileTex(A?'#d7e6ea':'#dff0f0',A?'#b8ccd2':'#c3dede',4)});FLOORS.tile1.map.repeat.set(3,3);
   FLOORS.tile2=M(0xffffff,{map:tileTex(A?'#ebe3d6':'#f6ece0',A?'#cfc2b0':'#e2d2bf',4)});FLOORS.tile2.map.repeat.set(4,4);
-  /* 땅·잔디·집 받침 */
-  const grass=new THREE.Mesh(new THREE.BoxGeometry(17.2,.2,16.6),M(A?0x8cc063:0xa9d98a));grass.position.set(6,-.1,7.3);grass.receiveShadow=true;g.add(grass);
+  /* 땅·잔디·집 받침. 멀리서 당겨 볼 때 잔디 끝이 화면 안에서 끊겨 보이지 않도록 넉넉히 깝니다 */
+  const grass=new THREE.Mesh(new THREE.BoxGeometry(70,.2,70),M(A?0x8cc063:0xa9d98a));grass.position.set(6,-.1,7.3);grass.receiveShadow=true;g.add(grass);
   const base=new THREE.Mesh(new THREE.BoxGeometry(12.3,.24,9.3),M(A?0xbfae96:0xe7d3bd));base.position.set(6,.12,4.5);base.receiveShadow=true;base.castShadow=true;g.add(base);
   for(const r of ROOMS){if(!r.floor)continue;const f=new THREE.Mesh(new THREE.BoxGeometry(r.x1-r.x0,.02,r.z1-r.z0),FLOORS[r.floor]);
     f.position.set((r.x0+r.x1)/2,.25,(r.z0+r.z1)/2);f.receiveShadow=true;g.add(f);}
@@ -286,15 +292,111 @@ async function build(){
   updateWalls(true);
 }
 
-/* ---------- 카메라 · 전체보기 · 방 이동 ---------- */
-const VIEW_ALL={t:new THREE.Vector3(6,0,6.6),dist:26,pol:.82,az:-.32};
+/* ---------- 카메라 · 전체보기 · 방 이동 ----------
+   휴대폰 세로 화면 재제작(10/27). 바뀐 것은 '보는 방법'뿐이고 집 생김새(B안)는 그대로입니다.
+   핵심 셋:
+   ① 화면 크기를 직접 재서, 집의 꼭짓점 8개가 화면에 꽉 들어가는 거리를 매번 다시 계산합니다.
+      (예전에는 거리를 어림수로 박아 두어 세로 화면에서 집이 작게 나왔습니다)
+   ② 세로 화면에서는 집의 긴 변(12m)이 화면 세로 쪽으로 오도록 보는 방향을 돌립니다.
+      가로로 긴 집을 세로 화면에서 정면으로 보면 좌우 폭에 걸려 집이 작아질 수밖에 없습니다.
+   ③ 위 제목 띠와 아래 버튼 띠를 피하되 위아래 여백을 같게 주어 집이 한가운데 옵니다. */
+function boxPts(b){const a=[];for(const x of[b.x0,b.x1])for(const y of[b.y0,b.y1])for(const z of[b.z0,b.z1])a.push(new THREE.Vector3(x,y,z));return a;}
+/* 집 건물의 경계상자(바닥 받침~벽 꼭대기). 마당은 넓어서 전체보기 기준에 넣지 않습니다 */
+const HOUSE_PTS=boxPts({x0:0,x1:12,y0:0,y1:2.76,z0:0,z1:9});
+const probe=new THREE.PerspectiveCamera(38,1,.1,600);
+
+/* 세로 화면인가(가로보다 길면 세로로 봅니다) */
+const isPortrait=()=>innerHeight>innerWidth*1.05;
+/* 전체보기 후보 각도·화각 목록.
+   화면 모양에 따라 집이 가장 크게 보이는 조합이 다르므로, 고정값을 쓰지 않고
+   아래 후보를 모두 실제로 투영해 재 보고 조건에 맞는 것을 고릅니다.
+   pol(올려다보는 각) 클수록 비스듬히 서서 벽면이 보이고, 작을수록 위에서 눌러 봅니다.
+   fov(화각) 작을수록 멀리서 당겨 크게 보이지만 원근이 사라져 평면 도면처럼 납작해집니다.
+
+   ※ 세로 화면 실측(2026-10-27, 390x844) — 두 기준이 서로 밀어냅니다.
+     집 폭(12m)이 화면 가로를 99.5%로 꽉 채우기 때문에, 세로를 더 채우려면
+     기울기를 낮춰 집을 위에서 눌러 보는 수밖에 없습니다.
+       기울기 0.40 → 세로 60.0% (기준 통과, 그러나 평면 도면처럼 보임)
+       기울기 0.62 → 세로 53.6% (벽면·가구 옆면이 보여 인형의 집으로 읽힘)
+     대각선(45도)으로 돌리는 방법도 재 봤으나, 집 대각선 폭(15m)이 가로에 더 걸려
+     세로 점유가 오히려 떨어졌습니다(60% 넘는 조합 0개).
+     '인형의 집 보기'가 이 화면의 기능 정의이므로 입체감을 우선합니다. */
+function overviewCands(){
+  const P=isPortrait();
+  const pols=P?[.58,.60,.62,.64]:[.40,.48,.56,.62,.68];
+  const fovs=P?[18,20,22]:[24,27,30,33];
+  /* 세로 화면은 집의 긴 변(12m)을 화면 세로로 세우는 방위각(±90도)이 유리합니다 */
+  const azs=P?[Math.PI/2,-Math.PI/2]:[0,.35,-.35];
+  const out=[];
+  for(const pol of pols)for(const fov of fovs)for(const az of azs)out.push({pol,az,fov});
+  return out;
+}
+/* 방 하나를 볼 때의 각도 — 방 안이 보이도록 더 낮게 섭니다 */
+function roomShot(){return isPortrait()?{pol:.62,az:Math.PI/2,fov:32}:{pol:.70,az:0,fov:34};}
+
+/* 위·아래 띠를 피한 '집을 놓을 자리'. 띠 바로 아래/위까지 쓰되 2px 숨만 띄웁니다.
+   위아래 띠 높이가 다르면 그만큼 다르게 잡아, 남는 공간을 한 쪽도 버리지 않습니다. */
+function safeArea(){
+  const W=innerWidth,H=innerHeight;
+  const t=document.querySelector('.top'),b=document.querySelector('.rooms');
+  const th=t?t.getBoundingClientRect().height:40,bh=b?b.getBoundingClientRect().height:70;
+  return {x0:1,x1:W-1,y0:th+2,y1:H-bh-2};
+}
+/* 어떤 거리에서 봤을 때 대상이 화면에서 차지하는 네모(픽셀) */
+function screenRect(pts,target,dist,pol,az,fov){
+  const W=innerWidth,H=innerHeight;
+  probe.fov=fov;probe.aspect=W/H;probe.updateProjectionMatrix();
+  probe.position.setFromSphericalCoords(dist,pol,az).add(target);
+  probe.lookAt(target);probe.updateMatrixWorld();
+  let x0=1/0,x1=-1/0,y0=1/0,y1=-1/0;
+  for(const p of pts){const v=p.clone().project(probe);
+    if(v.z>=1)return null;
+    const px=(v.x+1)/2*W,py=(1-v.y)/2*H;
+    if(px<x0)x0=px;if(px>x1)x1=px;if(py<y0)y0=py;if(py>y1)y1=py;}
+  return {x0,x1,y0,y1};
+}
+/* 대상이 자리 안에 꼭 들어가는 가장 가까운 거리를 반씩 좁혀 가며 찾습니다 */
+function fitDist(pts,target,pol,az,fov,safe){
+  const ok=d=>{const r=screenRect(pts,target,d,pol,az,fov);
+    return !!r&&r.x0>=safe.x0&&r.x1<=safe.x1&&r.y0>=safe.y0&&r.y1<=safe.y1;};
+  let lo=1,hi=420;if(!ok(hi))return hi;
+  for(let i=0;i<42;i++){const m=(lo+hi)/2;if(ok(m))hi=m;else lo=m;}
+  return hi;
+}
+
+const VIEW_ALL={t:new THREE.Vector3(6,1.1,4.5),dist:30,pol:.80,az:-.32,fov:38};
 let anim=null,overview=true;  /* 전체보기 상태면 화면 크기가 바뀔 때(가로·세로 돌림) 다시 맞춘다 */
-function goTo(t,dist,pol,az){const s0={t:ctl.target.clone(),p:cam.position.clone()};
-  const p=new THREE.Vector3().setFromSphericalCoords(dist,pol,az).add(t);anim={s0,t1:t.clone(),p1:p,k:0};}
-function viewAll(instant){overview=true;const v=VIEW_ALL;if(instant){ctl.target.copy(v.t);cam.position.copy(new THREE.Vector3().setFromSphericalCoords(v.dist,v.pol,v.az).add(v.t));return;}goTo(v.t,v.dist,v.pol,v.az);}
-function roomDist(r){const span=Math.max(r.x1-r.x0,r.z1-r.z0);const hf=Math.atan(Math.tan(THREE.MathUtils.degToRad(cam.fov/2))*cam.aspect);return Math.max(7,span*1.9,(span*.62)/Math.tan(hf));}
-function focusRoom(r){overview=false;const cx=(r.x0+r.x1)/2,cz=(r.z0+r.z1)/2;
-  goTo(new THREE.Vector3(cx,.6,cz),roomDist(r),.78,-.25);}
+function applyFov(f){if(Math.abs(cam.fov-f)>.01){cam.fov=f;cam.updateProjectionMatrix();}}
+function goTo(t,dist,pol,az,fov){const s0={t:ctl.target.clone(),p:cam.position.clone(),fov:cam.fov};
+  const p=new THREE.Vector3().setFromSphericalCoords(dist,pol,az).add(t);anim={s0,t1:t.clone(),p1:p,fov1:fov,k:0};}
+/* 전체보기 구도를 지금 화면 크기에 맞춰 다시 계산.
+   후보를 모두 투영해 재 보고, 집이 화면 세로를 가장 많이 채우는 조합을 고릅니다.
+   후보 목록 자체를 '인형의 집으로 읽히는 기울기' 범위로 좁혀 두었으므로(위 주석 참고),
+   여기서는 그 범위 안에서 가장 크게 보이는 것을 고르면 됩니다. */
+function calcViewAll(){
+  const safe=safeArea();
+  let best=null,bestFill=null;
+  for(const c of overviewCands()){
+    const d=fitDist(HOUSE_PTS,VIEW_ALL.t,c.pol,c.az,c.fov,safe);
+    const r=screenRect(HOUSE_PTS,VIEW_ALL.t,d,c.pol,c.az,c.fov);
+    if(!r)continue;
+    const v=(r.y1-r.y0)/innerHeight;
+    const cand={...c,dist:d,v};
+    if(!bestFill||v>bestFill.v)bestFill=cand;                    /* 가장 크게 보이는 것 */
+  }
+  const pick=bestFill;
+  if(pick){VIEW_ALL.pol=pick.pol;VIEW_ALL.az=pick.az;VIEW_ALL.fov=pick.fov;VIEW_ALL.dist=pick.dist;}
+  ctl.maxDistance=Math.max(70,VIEW_ALL.dist*1.5);
+  return VIEW_ALL;
+}
+function viewAll(instant){overview=true;const v=calcViewAll();
+  if(instant){applyFov(v.fov);ctl.target.copy(v.t);cam.position.copy(new THREE.Vector3().setFromSphericalCoords(v.dist,v.pol,v.az).add(v.t));return;}
+  goTo(v.t,v.dist,v.pol,v.az,v.fov);}
+function roomDist(r,s){const pts=boxPts({x0:r.x0,x1:r.x1,y0:0,y1:r.id==='yard'?1.2:2.4,z0:r.z0,z1:r.z1});
+  return {pts,dist:Math.max(5,fitDist(pts,roomTarget(r),s.pol,s.az,s.fov,safeArea()))};}
+function roomTarget(r){return new THREE.Vector3((r.x0+r.x1)/2,r.id==='yard'?.3:.8,(r.z0+r.z1)/2);}
+function focusRoom(r){overview=false;const s=roomShot();const t=roomTarget(r);
+  goTo(t,roomDist(r,s).dist,s.pol,s.az,s.fov);}
 const btnAll=document.getElementById('all');const roomBar=document.getElementById('rooms');
 function setActive(b){for(const x of roomBar.children)x.classList.toggle('on',x===b);}
 btnAll.onclick=()=>{viewAll();setActive(btnAll);};
@@ -303,20 +405,25 @@ for(const r of ROOMS){const b=document.createElement('button');b.textContent=r.n
   labels.push({el:l,p:new THREE.Vector3((r.x0+r.x1)/2,r.id==='yard'?1.2:2.9,r.id==='yard'?12.6:(r.z0+r.z1)/2)});}
 
 /* 인형의 집: 바라보는 곳보다 카메라 쪽에 있는 벽은 낮춘다 */
-/* 멀리서 볼 때(전체보기)는 안쪽 벽을 허리 높이로 낮춰 방 배치가 한눈에 보이게 한다 */
-function updateWalls(force){if(!shell)return;const v=new THREE.Vector3().subVectors(cam.position,ctl.target);const far=v.length()>17;v.y=0;v.normalize();
+/* 멀리서 볼 때(전체보기)는 안쪽 벽을 허리 높이로 낮춰 방 배치가 한눈에 보이게 한다.
+   단 휴대폰 세로 전체보기는 예외다(2026-10-27): 세로 화면은 집을 60% 이상 채우려면
+   거의 내려다보는 각도가 되는데, 그 상태에서 벽까지 낮추면 벽면이 사라져 평면 도면처럼 보인다.
+   그래서 세로 전체보기에서는 안쪽 벽을 세워 둬 벽면·가구 옆면이 보이게 한다. */
+function updateWalls(force){if(!shell)return;const v=new THREE.Vector3().subVectors(cam.position,ctl.target);
+  const far=v.length()>17&&!(overview&&isPortrait());v.y=0;v.normalize();
   for(const w of shell.userData.walls){const d=(w.cx-ctl.target.x)*v.x+(w.cz-ctl.target.z)*v.z;const st=d>.6?'low':(far&&w.inner)?'mid':'full';
     if(st!==w.st||force){w.st=st;w.full.visible=st==='full';w.low.visible=st==='low';w.mid.visible=st==='mid';}}}
 
 function resize(){const w=innerWidth,h=innerHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();
-  /* 전체보기 거리: 마당 폭(약 18m)이 화면 가로에 들어오게. 세로 화면은 멀리, 가로 화면은 26m */
-  const hf=Math.atan(Math.tan(THREE.MathUtils.degToRad(cam.fov/2))*cam.aspect);VIEW_ALL.dist=Math.min(60,Math.max(26,9.2/Math.tan(hf)));
+  /* 화면이 바뀌면(가로·세로 돌림) 전체보기 구도를 그 크기에 맞게 다시 계산한다 */
   if(overview&&!anim)viewAll(true);}
 addEventListener('resize',resize);
 ctl.addEventListener('start',()=>{anim=null;overview=false;});
 const tmp=new THREE.Vector3();
 function loop(){requestAnimationFrame(loop);
-  if(anim){anim.k=Math.min(1,anim.k+.045);const e=1-Math.pow(1-anim.k,3);ctl.target.lerpVectors(anim.s0.t,anim.t1,e);cam.position.lerpVectors(anim.s0.p,anim.p1,e);if(anim.k>=1)anim=null;}
+  if(anim){anim.k=Math.min(1,anim.k+.045);const e=1-Math.pow(1-anim.k,3);ctl.target.lerpVectors(anim.s0.t,anim.t1,e);cam.position.lerpVectors(anim.s0.p,anim.p1,e);
+    if(anim.fov1!=null)applyFov(anim.s0.fov+(anim.fov1-anim.s0.fov)*e);
+    if(anim.k>=1)anim=null;}
   ctl.update();updateWalls();R.render(scene,cam);
   for(const L of labels){tmp.copy(L.p).project(cam);const vis=tmp.z<1&&Math.abs(tmp.x)<1.1&&Math.abs(tmp.y)<1.1;
     L.el.classList.toggle('hide',!vis);L.el.style.left=((tmp.x+1)/2*innerWidth)+'px';L.el.style.top=((1-tmp.y)/2*innerHeight)+'px';}}
@@ -327,10 +434,58 @@ const q=new URLSearchParams(location.search);
 document.getElementById('msg').style.display='grid';
 await build();
 document.getElementById('msg').style.display='none';
-if(q.get('room')){const r=ROOMS.find(x=>x.id===q.get('room'));if(r){overview=false;const cx=(r.x0+r.x1)/2,cz=(r.z0+r.z1)/2,span=Math.max(r.x1-r.x0,r.z1-r.z0);
-  ctl.target.set(cx,.6,cz);cam.position.copy(new THREE.Vector3().setFromSphericalCoords(roomDist(r),.78,-.25).add(ctl.target));setActive(r.btn);}}
+/* 글꼴이 늦게 깔리면 띠 높이가 바뀌므로, 다 깔린 뒤 한 번 더 맞춥니다 */
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(overview&&!anim)viewAll(true);});
+if(q.get('room')){const r=ROOMS.find(x=>x.id===q.get('room'));if(r){overview=false;const s=roomShot();
+  applyFov(s.fov);ctl.target.copy(roomTarget(r));
+  cam.position.copy(new THREE.Vector3().setFromSphericalCoords(roomDist(r,s).dist,s.pol,s.az).add(ctl.target));setActive(r.btn);}}
 setTimeout(()=>{document.getElementById('hint').style.opacity=0;},4500);
 loop();
+
+/* 검사용: 집이 화면에서 차지하는 비율과 가림 여부를 숫자로 돌려줍니다(사람 눈 대신 기계로 확인) */
+window.__measure=()=>{const W=innerWidth,H=innerHeight;
+  let x0=1/0,x1=-1/0,y0=1/0,y1=-1/0;
+  for(const p of HOUSE_PTS){const v=p.clone().project(cam);const px=(v.x+1)/2*W,py=(1-v.y)/2*H;
+    if(px<x0)x0=px;if(px>x1)x1=px;if(py<y0)y0=py;if(py>y1)y1=py;}
+  const top=document.querySelector('.top').getBoundingClientRect();
+  const rooms=document.querySelector('.rooms').getBoundingClientRect();
+  const hint=document.getElementById('hint').getBoundingClientRect();
+  const btns=[...document.querySelectorAll('.rooms button')].map(b=>{const g=b.getBoundingClientRect();
+    return {t:b.textContent,x:Math.round(g.left),y:Math.round(g.top),w:Math.round(g.width),h:Math.round(g.height),
+            inView:g.left>=-1&&g.right<=W+1&&g.top>=-1&&g.bottom<=H+1,fs:getComputedStyle(b).fontSize};});
+  const lbls=[...document.querySelectorAll('.lbl')].map(l=>{const g=l.getBoundingClientRect();
+    return {t:l.textContent,hidden:l.classList.contains('hide'),x:Math.round(g.left),y:Math.round(g.top),fs:getComputedStyle(l).fontSize};});
+  return {screen:[W,H],portrait:isPortrait(),fov:+cam.fov.toFixed(1),dist:+cam.position.distanceTo(ctl.target).toFixed(1),
+    pol:+VIEW_ALL.pol.toFixed(2),az:+VIEW_ALL.az.toFixed(2),
+    house:{x0:Math.round(x0),x1:Math.round(x1),y0:Math.round(y0),y1:Math.round(y1),
+           vPct:+(((y1-y0)/H)*100).toFixed(1),hPct:+(((x1-x0)/W)*100).toFixed(1),
+           fullyVisible:x0>=0&&x1<=W&&y0>=0&&y1<=H},
+    overlap:{topBand:y0<top.bottom,bottomBand:y1>rooms.top,
+             hintOverHouse:!(hint.bottom<y0||hint.top>y1||hint.right<x0||hint.left>x1)},
+    bands:{top:Math.round(top.height),rooms:Math.round(rooms.height)},
+    btns,lbls,titleFs:getComputedStyle(document.querySelector('.title')).fontSize};};
+/* 진단용: 각도·화각 후보를 넓게 훑어 세로 점유 상위를 돌려줍니다(한계가 어디인지 수치로 보려고) */
+window.__scan=(n)=>{const safe=safeArea(),out=[];
+  const pols=[];for(let p=.10;p<=.70;p+=.02)pols.push(+p.toFixed(2));
+  const fovs=[10,12,14,16,18,20,23,26,30];
+  const azs=[Math.PI/2,-Math.PI/2,Math.PI/2-.3,Math.PI/2+.3,0,.4,-.4,Math.PI/4,Math.PI*3/4,-Math.PI/4,-Math.PI*3/4,.6,1.0,1.2,2.0,2.4];
+  for(const pol of pols)for(const fov of fovs)for(const az of azs){
+    const d=fitDist(HOUSE_PTS,VIEW_ALL.t,pol,az,fov,safe);
+    const r=screenRect(HOUSE_PTS,VIEW_ALL.t,d,pol,az,fov);
+    if(!r)continue;
+    out.push({pol,az:+az.toFixed(2),fov,dist:+d.toFixed(1),
+      v:+(((r.y1-r.y0)/innerHeight)*100).toFixed(1),h:+(((r.x1-r.x0)/innerWidth)*100).toFixed(1)});}
+  out.sort((a,b)=>b.v-a.v);return n===0?out:out.slice(0,n||12);};
+/* 진단용: 기울기·화각을 손으로 지정해 그 구도로 바로 보여 줍니다(비교 캡처용).
+   거리는 집 전체가 화면에 들어오도록 fitDist로 다시 계산합니다 */
+window.__force=(pol,fov)=>{const az=Math.PI/2,safe=safeArea();
+  const d=fitDist(HOUSE_PTS,VIEW_ALL.t,pol,az,fov,safe);
+  VIEW_ALL.pol=pol;VIEW_ALL.az=az;VIEW_ALL.fov=fov;VIEW_ALL.dist=d;
+  anim=null;overview=true;applyFov(fov);
+  ctl.maxDistance=Math.max(70,d*1.5);
+  ctl.target.copy(VIEW_ALL.t);
+  cam.position.copy(new THREE.Vector3().setFromSphericalCoords(d,pol,az).add(VIEW_ALL.t));
+  ctl.update();updateWalls(true);};
 window.__ready=true;
 </script>
 </body>
